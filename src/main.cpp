@@ -5,10 +5,11 @@
 #include <sstream>
 #include <string>
 #include <numeric>
+#include <unordered_set>
 
 using Permutation = std::vector<int>;
 using PermutationList = std::vector<Permutation>;
-using Domains = std::vector<std::vector<std::set<int>>>;
+using Domains = std::vector<std::vector<std::unordered_set<int>>>;
 
 std::vector<std::vector<PermutationList>> all_permutations;
 
@@ -40,7 +41,7 @@ void generate_permutations(int n) {
 }
 
 Domains calculate_domains(int n, const std::vector<PermutationList>& line_perm, const std::vector<PermutationList>& col_perm) {
-    Domains domains(n, std::vector<std::set<int>>(n));
+    Domains domains(n, std::vector<std::unordered_set<int>>(n));
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
             std::set<int> line_vals, col_vals;
@@ -68,8 +69,8 @@ bool prune_target_perms(
     std::vector<PermutationList>& target_perms,
     bool is_source_line,
     bool& changed) {
-    std::vector<std::vector<std::set<int>>> possible_values(
-        n, std::vector<std::set<int>>(n));
+    Domains possible_values(
+        n, std::vector<std::unordered_set<int>>(n));
     for (int i = 0; i < n; ++i) {
         for (const auto& p_source : source_perms[i]) {
             for (int j = 0; j < n; ++j) {
@@ -144,7 +145,7 @@ bool solve(int n, std::vector<PermutationList>& line_perm, std::vector<Permutati
         return is_solved(n, line_perm);
     }
 
-    std::set<int> value_candidates = domains[r][c];
+    std::unordered_set<int> value_candidates = domains[r][c];
     for (int val : value_candidates) {
         auto line_perm_backup = line_perm;
         auto col_perm_backup = col_perm;
