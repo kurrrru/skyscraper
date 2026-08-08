@@ -1,11 +1,10 @@
+#include <cstdint>
 #include <iostream>
 #include <vector>
-#include <set>
 #include <algorithm>
 #include <sstream>
 #include <string>
 #include <numeric>
-#include <unordered_set>
 
 using Permutation = std::vector<int>;
 using PermutationList = std::vector<Permutation>;
