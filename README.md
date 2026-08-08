@@ -115,7 +115,7 @@ Solution Found:
 While formal benchmarking has not been conducted, the solver demonstrates strong performance for moderately sized puzzles.
 
   - A 10x10 puzzle is typically solved within a few seconds.
-  - A 11x11 puzzle is solved in approximately 2 minutes.
+  - A 11x11 puzzle is solved in approximately 30 seconds.
   - Performance for puzzles larger than 11x11 has not been tested.
 
 The complexity of the puzzle, determined by the specific clue values, can also influence the solving time. Puzzles that require more extensive backtracking will naturally take longer to solve.
