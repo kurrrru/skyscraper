@@ -9,9 +9,13 @@
 
 using Permutation = std::vector<int>;
 using PermutationList = std::vector<Permutation>;
-using Domains = std::vector<std::vector<std::unordered_set<int>>>;
+using Domains = std::vector<std::vector<uint64_t>>; // 高々Nは15程度だろう
 
 std::vector<std::vector<PermutationList>> all_permutations;
+
+inline uint64_t bit_of(int v) {
+    return 1ULL << (v - 1);
+}
 
 void generate_permutations(int n) {
     all_permutations.assign(n + 1, std::vector<PermutationList>(n + 1));
@@ -41,16 +45,21 @@ void generate_permutations(int n) {
 }
 
 Domains calculate_domains(int n, const std::vector<PermutationList>& line_perm, const std::vector<PermutationList>& col_perm) {
-    Domains domains(n, std::vector<std::unordered_set<int>>(n));
+    Domains domains(n, std::vector<uint64_t>(n));
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            std::set<int> line_vals, col_vals;
-            for (const auto& p : line_perm[i]) if(!p.empty()) line_vals.insert(p[j]);
-            for (const auto& p : col_perm[j]) if(!p.empty()) col_vals.insert(p[i]);
-            
-            std::set_intersection(line_vals.begin(), line_vals.end(),
-                col_vals.begin(), col_vals.end(),
-                std::inserter(domains[i][j], domains[i][j].begin()));
+            uint64_t line_mask = 0, col_mask = 0;
+            for (const auto& p : line_perm[i]) {
+                if (!p.empty()) {
+                    line_mask |= bit_of(p[j]);
+                }
+            }
+            for (const auto& p : col_perm[j]) {
+                if (!p.empty()) {
+                    col_mask |= bit_of(p[i]);
+                }
+            }
+            domains[i][j] = line_mask & col_mask;
         }
     }
     return domains;
@@ -69,15 +78,14 @@ bool prune_target_perms(
     std::vector<PermutationList>& target_perms,
     bool is_source_line,
     bool& changed) {
-    Domains possible_values(
-        n, std::vector<std::unordered_set<int>>(n));
+    Domains possible_values(n, std::vector<uint64_t>(n));
     for (int i = 0; i < n; ++i) {
         for (const auto& p_source : source_perms[i]) {
             for (int j = 0; j < n; ++j) {
                 if (is_source_line) {
-                    possible_values[i][j].insert(p_source[j]);
+                    possible_values[i][j] |= bit_of(p_source[j]);
                 } else {
-                    possible_values[j][i].insert(p_source[j]);
+                    possible_values[j][i] |= bit_of(p_source[j]);
                 }
             }
         }
@@ -90,9 +98,9 @@ bool prune_target_perms(
                 for (int j = 0; j < n; ++j) {
                     bool is_valid = false;
                     if (is_source_line) {
-                        is_valid = possible_values[j][i].count(p_target[j]) > 0;
+                        is_valid = (possible_values[j][i] & bit_of(p_target[j])) != 0;
                     } else {
-                        is_valid = possible_values[i][j].count(p_target[j]) > 0;
+                        is_valid = (possible_values[i][j] & bit_of(p_target[j])) != 0;
                     }
                     if (!is_valid) return true; // to be removed
                 }
@@ -133,8 +141,9 @@ bool solve(int n, std::vector<PermutationList>& line_perm, std::vector<Permutati
     size_t min_domain_size = n + 1;
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            if (domains[i][j].size() > 1 && domains[i][j].size() < min_domain_size) {
-                min_domain_size = domains[i][j].size();
+            if (__builtin_popcountll(domains[i][j]) > 1
+                && static_cast<size_t>(__builtin_popcountll(domains[i][j])) < min_domain_size) {
+                min_domain_size = __builtin_popcountll(domains[i][j]);
                 r = i;
                 c = j;
             }
@@ -145,8 +154,10 @@ bool solve(int n, std::vector<PermutationList>& line_perm, std::vector<Permutati
         return is_solved(n, line_perm);
     }
 
-    std::unordered_set<int> value_candidates = domains[r][c];
-    for (int val : value_candidates) {
+    uint64_t candidates = domains[r][c];
+    while (candidates) {
+        int val = __builtin_ctzll(candidates) + 1;  // 最下位bitの位置 + 1
+        candidates &= candidates - 1;
         auto line_perm_backup = line_perm;
         auto col_perm_backup = col_perm;
 
@@ -189,6 +200,11 @@ int main(int argc, char** argv) {
         return 1;
     }
     int n = clues.size() / 4;
+
+    if (n > 64) {
+        std::cerr << "Error: N must be <= 64" << std::endl;
+        return 1;
+    }
 
     std::cout << "Solving for N=" << n << std::endl;
     generate_permutations(n);
